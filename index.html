@@ -3,63 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accessibility Text Editor</title>
+    <title>AccessAble | Assistive Writing Suite</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;700&display=swap');
+        body { font-family: 'Lexend', sans-serif; }
+        .dyslexic-mode { letter-spacing: 0.15em; word-spacing: 0.3em; line-height: 2; }
+        .reading-ruler { border-top: 4px solid #3b82f6; border-bottom: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-slate-50">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         function App() {
-            const [text, setText] = useState("");
-            const [fontSize, setFontSize] = useState(18);
-            const [contrast, setContrast] = useState('normal');
-            const [dyslexiaFont, setDyslexiaFont] = useState(false);
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [user, setUser] = useState("");
+            const [view, setView] = useState('login'); // 'login' or 'app'
+            
+            // App State
+            const [notes, setNotes] = useState(JSON.parse(localStorage.getItem('accessable_notes')) || []);
+            const [activeNote, setActiveNote] = useState({ id: Date.now(), title: "New Document", content: "" });
+            
+            // Accessibility Settings
+            const [fontSize, setFontSize] = useState(20);
+            const [contrast, setContrast] = useState('light'); // light, dark, high
+            const [dyslexic, setDyslexic] = useState(false);
+            const [ruler, setRuler] = useState(false);
 
-            const readAloud = () => {
+            useEffect(() => {
+                localStorage.setItem('accessable_notes', JSON.stringify(notes));
+            }, [notes]);
+
+            const handleAuth = (e) => {
+                e.preventDefault();
+                setIsLoggedIn(true);
+                setView('app');
+            };
+
+            const saveDocument = () => {
+                const updatedNotes = notes.filter(n => n.id !== activeNote.id);
+                setNotes([activeNote, ...updatedNotes]);
+                alert("Note saved successfully!");
+            };
+
+            const speak = () => {
                 window.speechSynthesis.cancel();
-                const msg = new SpeechSynthesisUtterance(text);
-                window.speechSynthesis.speak(msg);
+                const ut = new SpeechSynthesisUtterance(activeNote.content || "Nothing to read.");
+                window.speechSynthesis.speak(ut);
             };
 
-            const theme = {
-                normal: "bg-gray-50 text-gray-800",
-                dark: "bg-zinc-900 text-white",
-                high: "bg-white text-black border-4 border-black"
-            };
+            if (view === 'login') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-700 p-6">
+                        <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center">
+                            <h1 className="text-4xl font-bold text-blue-600 mb-2">AccessAble</h1>
+                            <p className="text-slate-500 mb-8 font-medium">Empowering every writer.</p>
+                            <form onSubmit={handleAuth} className="space-y-4 text-left">
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 ml-1">Username</label>
+                                    <input type="text" onChange={(e) => setUser(e.target.value)} required className="w-full mt-1 p-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none" placeholder="Enter your name" />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-bold text-slate-700 ml-1">Password</label>
+                                    <input type="password" required className="w-full mt-1 p-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none" placeholder="••••••••" />
+                                </div>
+                                <button className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:bg-blue-700 transition-all active:scale-95 mt-4">Sign In</button>
+                            </form>
+                            <p className="mt-6 text-sm text-slate-400">Don't have an account? <span className="text-blue-600 font-bold cursor-pointer">Sign up</span></p>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
-                <div className={`min-h-screen transition-colors duration-300 ${theme[contrast]} ${dyslexiaFont ? 'font-serif' : 'font-sans'}`}>
-                    <nav className="p-4 border-b flex justify-between items-center bg-opacity-10 bg-black">
-                        <h1 className="text-xl font-bold italic">ClearRead Accessibility</h1>
-                        <div className="flex gap-4">
-                            <button onClick={() => setContrast(c => c === 'normal' ? 'dark' : c === 'dark' ? 'high' : 'normal')} className="px-3 py-1 border rounded hover:bg-blue-500 hover:text-white">Contrast</button>
-                            <button onClick={() => setDyslexiaFont(!dyslexiaFont)} className="px-3 py-1 border rounded hover:bg-blue-500 hover:text-white">Font Style</button>
+                <div className={`min-h-screen flex flex-col ${contrast === 'dark' ? 'bg-zinc-900 text-white' : contrast === 'high' ? 'bg-black text-yellow-400' : 'bg-slate-50 text-slate-900'}`}>
+                    {/* Top Navigation */}
+                    <nav className="h-16 border-b flex items-center justify-between px-6 bg-white shadow-sm text-slate-900">
+                        <div className="flex items-center gap-6">
+                            <span className="text-2xl font-black text-blue-600 tracking-tight">AccessAble</span>
+                            <input 
+                                className="bg-slate-100 px-3 py-1 rounded-md font-bold focus:bg-white transition outline-none border border-transparent focus:border-blue-200"
+                                value={activeNote.title}
+                                onChange={(e) => setActiveNote({...activeNote, title: e.target.value})}
+                            />
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium text-slate-500">Welcome, {user || 'User'}</span>
+                            <button onClick={() => setView('login')} className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition">Logout</button>
                         </div>
                     </nav>
 
-                    <main className="p-6 max-w-4xl mx-auto">
-                        <div className="flex gap-4 mb-4">
-                            <button onClick={() => setFontSize(s => s + 2)} className="p-2 border rounded">A+</button>
-                            <button onClick={() => setFontSize(s => Math.max(12, s - 2))} className="p-2 border rounded">A-</button>
-                            <button onClick={readAloud} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Read Aloud</button>
-                        </div>
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* Notes Sidebar */}
+                        <aside className="w-72 bg-white border-r p-5 hidden lg:block overflow-y-auto text-slate-900">
+                            <button onClick={() => setActiveNote({id: Date.now(), title: "New Note", content: ""})} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold mb-8 hover:bg-blue-700 shadow-md transition">+ New Document</button>
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Saved Documents</h3>
+                            <div className="space-y-2">
+                                {notes.map(n => (
+                                    <div key={n.id} onClick={() => setActiveNote(n)} className={`p-3 rounded-xl cursor-pointer transition truncate ${activeNote.id === n.id ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'}`}>
+                                        {n.title}
+                                    </div>
+                                ))}
+                            </div>
+                        </aside>
 
-                        <textarea 
-                            className={`w-full h-96 p-6 rounded-lg shadow-inner border focus:ring-2 focus:ring-blue-500 outline-none bg-transparent`}
-                            style={{ fontSize: `${fontSize}px` }}
-                            placeholder="Type or paste text here to see how it looks..."
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                        />
-                        <p className="mt-2 opacity-60 italic text-sm">Watermark-free version for competition.</p>
-                    </main>
+                        {/* Main App Workspace */}
+                        <main className="flex-1 flex flex-col p-4 md:p-8">
+                            {/* Toolbar */}
+                            <div className="mb-6 flex flex-wrap gap-2 items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-200 text-slate-900">
+                                <div className="flex bg-slate-100 rounded-lg p-1 mr-2">
+                                    <button onClick={() => setFontSize(s => s + 2)} className="px-3 py-1 hover:bg-white rounded-md transition font-bold">A+</button>
+                                    <button onClick={() => setFontSize(s => Math.max(12, s - 2))} className="px-3 py-1 hover:bg-white rounded-md transition font-bold">A-</button>
+                                </div>
+                                <button onClick={() => setContrast(c => c === 'light' ? 'dark' : c === 'dark' ? 'high' : 'light')} className="px-4 py-2 hover:bg-slate-100 rounded-xl transition font-medium border">Contrast</button>
+                                <button onClick={() => setDyslexic(!dyslexic)} className={`px-4 py-2 rounded-xl transition font-medium border ${dyslexic ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100'}`}>Dyslexia Font</button>
+                                <button onClick={() => setRuler(!ruler)} className={`px-4 py-2 rounded-xl transition font-medium border ${ruler ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100'}`}>Reading Ruler</button>
+                                
+                                <div className="ml-auto flex gap-2">
+                                    <button onClick={speak} className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition shadow-sm">Read Aloud</button>
+                                    <button onClick={saveDocument} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm">Save</button>
+                                </div>
+                            </div>
+
+                            {/* Editor Area */}
+                            <div className="relative flex-1 group">
+                                <textarea 
+                                    className={`w-full h-full p-10 rounded-3xl border-2 shadow-xl outline-none resize-none transition-all
+                                        ${contrast === 'dark' ? 'bg-zinc-800 border-zinc-700' : contrast === 'high' ? 'bg-black border-yellow-400' : 'bg-white border-slate-100'}
+                                        ${dyslexic ? 'dyslexic-mode' : ''}
+                                        ${ruler ? 'reading-ruler' : ''}
+                                    `}
+                                    style={{ fontSize: `${fontSize}px` }}
+                                    placeholder="Begin your accessible writing journey here..."
+                                    value={activeNote.content}
+                                    onChange={(e) => setActiveNote({...activeNote, content: e.target.value})}
+                                />
+                            </div>
+                        </main>
+                    </div>
                 </div>
             );
         }
