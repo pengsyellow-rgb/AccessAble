@@ -9,13 +9,15 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;700&display=swap');
-        body { font-family: 'Lexend', sans-serif; }
-        .dyslexic-mode { letter-spacing: 0.15em; word-spacing: 0.3em; line-height: 2; }
-        .reading-ruler { border-top: 4px solid #3b82f6; border-bottom: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;900&display=swap');
+        body { font-family: 'Lexend', sans-serif; transition: background-color 0.3s ease; }
+        .dyslexic-mode { letter-spacing: 0.15em; word-spacing: 0.3em; line-height: 2.2; font-weight: 500; }
+        .reading-ruler { border-top: 6px solid #3b82f6; border-bottom: 6px solid #3b82f6; background: rgba(59, 130, 246, 0.12); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-slate-50 antialiased">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -24,23 +26,22 @@
         function App() {
             const [user, setUser] = useState(JSON.parse(localStorage.getItem('accessable_user')) || null);
             const [view, setView] = useState(user ? 'app' : 'login');
-            
             const [notes, setNotes] = useState(JSON.parse(localStorage.getItem('accessable_notes')) || []);
-            const [activeNote, setActiveNote] = useState({ id: Date.now(), title: "New Document", content: "" });
+            const [activeNote, setActiveNote] = useState({ id: Date.now(), title: "Untitled Document", content: "" });
             
             const [fontSize, setFontSize] = useState(20);
-            const [contrast, setContrast] = useState('light');
+            const [contrast, setContrast] = useState('light'); // light, dark, high
             const [dyslexic, setDyslexic] = useState(false);
             const [ruler, setRuler] = useState(false);
 
             useEffect(() => {
-                localStorage.setItem('accessable_notes', JSON.stringify(notes));
+                if(user) localStorage.setItem('accessable_notes', JSON.stringify(notes));
             }, [notes]);
 
-            const handleAuth = (e, type) => {
+            const handleAuth = (e) => {
                 e.preventDefault();
                 const username = e.target.username.value;
-                const userData = { username };
+                const userData = { username, id: Date.now() };
                 setUser(userData);
                 localStorage.setItem('accessable_user', JSON.stringify(userData));
                 setView('app');
@@ -53,106 +54,105 @@
             };
 
             const saveDocument = () => {
-                if (!user) {
-                    alert("Access Denied: You must be signed in to save notes.");
-                    return;
-                }
                 const updatedNotes = notes.filter(n => n.id !== activeNote.id);
                 setNotes([activeNote, ...updatedNotes]);
-                alert("Note saved successfully!");
+                alert("Note securely saved to your AccessAble account.");
             };
 
             const speak = () => {
                 window.speechSynthesis.cancel();
-                const ut = new SpeechSynthesisUtterance(activeNote.content || "Nothing to read.");
+                const ut = new SpeechSynthesisUtterance(activeNote.content || "Please enter text to read.");
                 window.speechSynthesis.speak(ut);
+            };
+
+            // Theme configuration to fix the "black on black" issue
+            const getThemeClasses = () => {
+                if (contrast === 'dark') return "bg-[#000000] text-white border-zinc-800";
+                if (contrast === 'high') return "bg-[#000000] text-[#ffff00] border-[#ffff00]";
+                return "bg-white text-slate-800 border-slate-100";
             };
 
             if (view === 'login' || view === 'signup') {
                 return (
-                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-700 p-6">
-                        <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center">
-                            <h1 className="text-4xl font-bold text-blue-600 mb-2">AccessAble</h1>
-                            <p className="text-slate-500 mb-8 font-medium italic">Empowering every writer.</p>
-                            <form onSubmit={(e) => handleAuth(e, view)} className="space-y-4 text-left">
-                                <div>
-                                    <label className="text-sm font-bold text-slate-700 ml-1">Username</label>
-                                    <input name="username" type="text" required className="w-full mt-1 p-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none" placeholder="Enter name" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-bold text-slate-700 ml-1">Password</label>
-                                    <input type="password" required className="w-full mt-1 p-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none" placeholder="••••••••" />
-                                </div>
-                                <button className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:bg-blue-700 transition-all active:scale-95 mt-4">
-                                    {view === 'login' ? 'Sign In' : 'Create Account'}
+                    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
+                        <div className="bg-white p-12 rounded-[2.5rem] shadow-2xl w-full max-w-lg text-center">
+                            <h1 className="text-5xl font-black text-slate-900 mb-2 tracking-tighter">Access<span className="text-blue-600">Able</span></h1>
+                            <p className="text-slate-500 mb-10 text-lg font-medium italic underline decoration-blue-200">The writing suite for everyone.</p>
+                            <form onSubmit={handleAuth} className="space-y-5 text-left">
+                                <input name="username" type="text" required className="w-full p-4 bg-slate-100 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Username" />
+                                <input type="password" required className="w-full p-4 bg-slate-100 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Password" />
+                                <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-xl hover:bg-blue-700 transition-all active:scale-95">
+                                    {view === 'login' ? 'SIGN IN' : 'SIGN UP'}
                                 </button>
                             </form>
-                            <p className="mt-6 text-sm text-slate-400">
-                                {view === 'login' ? "Don't have an account?" : "Already have an account?"} 
-                                <span onClick={() => setView(view === 'login' ? 'signup' : 'login')} className="text-blue-600 font-bold cursor-pointer ml-1 underline">
-                                    {view === 'login' ? 'Sign up' : 'Login'}
-                                </span>
-                            </p>
+                            <button onClick={() => setView(view === 'login' ? 'signup' : 'login')} className="mt-6 text-blue-600 font-bold hover:underline tracking-tight">
+                                {view === 'login' ? "New here? Create an account" : "Have an account? Log in"}
+                            </button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className={`min-h-screen flex flex-col ${contrast === 'dark' ? 'bg-zinc-900 text-white' : contrast === 'high' ? 'bg-black text-yellow-400' : 'bg-slate-50 text-slate-900'}`}>
-                    <nav className="h-16 border-b flex items-center justify-between px-6 bg-white shadow-sm text-slate-900 font-sans">
+                <div className={`min-h-screen flex flex-col transition-all duration-300 ${contrast !== 'light' ? 'bg-black' : 'bg-slate-50'}`}>
+                    
+                    {/* Header */}
+                    <nav className="h-20 border-b flex items-center justify-between px-8 bg-white border-slate-200 shadow-sm z-50">
                         <div className="flex items-center gap-6">
-                            <span className="text-2xl font-black text-blue-600 tracking-tight cursor-default">AccessAble</span>
+                            <span className="text-3xl font-black text-blue-600 tracking-tighter">AccessAble</span>
                             <input 
-                                className="bg-slate-100 px-3 py-1 rounded-md font-bold focus:bg-white transition outline-none border border-transparent focus:border-blue-200"
+                                className="bg-slate-100 px-4 py-1.5 rounded-xl font-bold text-slate-700 focus:bg-white border-2 border-transparent focus:border-blue-500 transition outline-none"
                                 value={activeNote.title}
                                 onChange={(e) => setActiveNote({...activeNote, title: e.target.value})}
                             />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium text-slate-500">Welcome, {user?.username}</span>
-                            <button onClick={handleLogout} className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition">Logout</button>
+                        <div className="flex items-center gap-6">
+                            <span className="font-bold text-slate-500">Member: {user?.username}</span>
+                            <button onClick={handleLogout} className="px-5 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-black hover:bg-red-100 transition">LOGOUT</button>
                         </div>
                     </nav>
 
                     <div className="flex flex-1 overflow-hidden">
-                        <aside className="w-72 bg-white border-r p-5 hidden lg:block overflow-y-auto text-slate-900">
-                            <button onClick={() => setActiveNote({id: Date.now(), title: "New Note", content: ""})} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold mb-8 hover:bg-blue-700 shadow-md transition">+ New Document</button>
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Saved Documents</h3>
-                            <div className="space-y-2">
+                        {/* Sidebar */}
+                        <aside className="w-80 bg-white border-r border-slate-100 p-6 hidden lg:flex flex-col shadow-inner">
+                            <button onClick={() => setActiveNote({id: Date.now(), title: "New Document", content: ""})} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black hover:bg-blue-700 transition shadow-lg shadow-blue-100 mb-8 tracking-widest">+ NEW NOTE</button>
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Saved Documents</h3>
+                            <div className="space-y-2 overflow-y-auto flex-1 custom-scrollbar">
                                 {notes.map(n => (
-                                    <div key={n.id} onClick={() => setActiveNote(n)} className={`p-3 rounded-xl cursor-pointer transition truncate ${activeNote.id === n.id ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'}`}>
-                                        {n.title}
+                                    <div key={n.id} onClick={() => setActiveNote(n)} className={`p-4 rounded-2xl cursor-pointer transition-all ${activeNote.id === n.id ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50 text-slate-600'}`}>
+                                        <p className="truncate">{n.title}</p>
                                     </div>
                                 ))}
                             </div>
                         </aside>
 
-                        <main className="flex-1 flex flex-col p-4 md:p-8">
-                            <div className="mb-6 flex flex-wrap gap-2 items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-200 text-slate-900">
-                                <div className="flex bg-slate-100 rounded-lg p-1 mr-2">
-                                    <button onClick={() => setFontSize(s => s + 2)} className="px-3 py-1 hover:bg-white rounded-md transition font-bold text-black">A+</button>
-                                    <button onClick={() => setFontSize(s => Math.max(12, s - 2))} className="px-3 py-1 hover:bg-white rounded-md transition font-bold text-black">A-</button>
+                        {/* Editor */}
+                        <main className="flex-1 flex flex-col p-6 md:p-10 relative">
+                            {/* Toolbar */}
+                            <div className="mb-6 flex flex-wrap gap-2 items-center bg-white border border-slate-200 p-3 rounded-[2rem] shadow-xl z-10 w-full max-w-4xl mx-auto">
+                                <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
+                                    <button onClick={() => setFontSize(s => s + 2)} className="px-4 py-2 hover:bg-white rounded-lg transition font-black text-slate-800">A+</button>
+                                    <button onClick={() => setFontSize(s => Math.max(12, s - 2))} className="px-4 py-2 hover:bg-white rounded-lg transition font-black text-slate-800">A-</button>
                                 </div>
-                                <button onClick={() => setContrast(c => c === 'light' ? 'dark' : c === 'dark' ? 'high' : 'light')} className="px-4 py-2 hover:bg-slate-100 rounded-xl transition font-medium border border-slate-200 text-black">Contrast</button>
-                                <button onClick={() => setDyslexic(!dyslexic)} className={`px-4 py-2 rounded-xl transition font-medium border ${dyslexic ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100 text-black border-slate-200'}`}>Dyslexia Font</button>
-                                <button onClick={() => setRuler(!ruler)} className={`px-4 py-2 rounded-xl transition font-medium border ${ruler ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100 text-black border-slate-200'}`}>Reading Ruler</button>
+                                <button onClick={() => setContrast(c => c === 'light' ? 'dark' : c === 'dark' ? 'high' : 'light')} className="px-5 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition font-bold text-slate-700 text-sm">Contrast</button>
+                                <button onClick={() => setDyslexic(!dyslexic)} className={`px-5 py-2 rounded-xl transition font-bold text-sm ${dyslexic ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Dyslexia Font</button>
+                                <button onClick={() => setRuler(!ruler)} className={`px-5 py-2 rounded-xl transition font-bold text-sm ${ruler ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Reading Ruler</button>
                                 
                                 <div className="ml-auto flex gap-2">
-                                    <button onClick={speak} className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition shadow-sm">Read Aloud</button>
-                                    <button onClick={saveDocument} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm">Save</button>
+                                    <button onClick={speak} className="px-5 py-2 bg-emerald-500 text-white rounded-xl font-black text-xs tracking-widest uppercase hover:bg-emerald-600 transition">Listen</button>
+                                    <button onClick={saveDocument} className="px-5 py-2 bg-blue-600 text-white rounded-xl font-black text-xs tracking-widest uppercase hover:bg-blue-700 transition">Save</button>
                                 </div>
                             </div>
 
-                            <div className="relative flex-1 group">
+                            <div className="flex-1 max-w-5xl w-full mx-auto relative h-full">
                                 <textarea 
-                                    className={`w-full h-full p-10 rounded-3xl border-2 shadow-xl outline-none resize-none transition-all text-black
-                                        ${contrast === 'dark' ? 'bg-zinc-800 border-zinc-700 text-white' : contrast === 'high' ? 'bg-black border-yellow-400 text-yellow-400' : 'bg-white border-slate-100'}
+                                    className={`w-full h-full p-12 rounded-[2.5rem] border-4 shadow-2xl outline-none resize-none transition-all duration-300
+                                        ${getThemeClasses()}
                                         ${dyslexic ? 'dyslexic-mode' : ''}
                                         ${ruler ? 'reading-ruler' : ''}
                                     `}
                                     style={{ fontSize: `${fontSize}px` }}
-                                    placeholder="Begin your accessible writing journey here..."
+                                    placeholder="Start your writing journey here..."
                                     value={activeNote.content}
                                     onChange={(e) => setActiveNote({...activeNote, content: e.target.value})}
                                 />
