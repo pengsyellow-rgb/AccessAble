@@ -22,17 +22,14 @@
         const { useState, useEffect } = React;
 
         function App() {
-            const [isLoggedIn, setIsLoggedIn] = useState(false);
-            const [user, setUser] = useState("");
-            const [view, setView] = useState('login'); // 'login' or 'app'
+            const [user, setUser] = useState(JSON.parse(localStorage.getItem('accessable_user')) || null);
+            const [view, setView] = useState(user ? 'app' : 'login');
             
-            // App State
             const [notes, setNotes] = useState(JSON.parse(localStorage.getItem('accessable_notes')) || []);
             const [activeNote, setActiveNote] = useState({ id: Date.now(), title: "New Document", content: "" });
             
-            // Accessibility Settings
             const [fontSize, setFontSize] = useState(20);
-            const [contrast, setContrast] = useState('light'); // light, dark, high
+            const [contrast, setContrast] = useState('light');
             const [dyslexic, setDyslexic] = useState(false);
             const [ruler, setRuler] = useState(false);
 
@@ -40,13 +37,26 @@
                 localStorage.setItem('accessable_notes', JSON.stringify(notes));
             }, [notes]);
 
-            const handleAuth = (e) => {
+            const handleAuth = (e, type) => {
                 e.preventDefault();
-                setIsLoggedIn(true);
+                const username = e.target.username.value;
+                const userData = { username };
+                setUser(userData);
+                localStorage.setItem('accessable_user', JSON.stringify(userData));
                 setView('app');
             };
 
+            const handleLogout = () => {
+                setUser(null);
+                localStorage.removeItem('accessable_user');
+                setView('login');
+            };
+
             const saveDocument = () => {
+                if (!user) {
+                    alert("Access Denied: You must be signed in to save notes.");
+                    return;
+                }
                 const updatedNotes = notes.filter(n => n.id !== activeNote.id);
                 setNotes([activeNote, ...updatedNotes]);
                 alert("Note saved successfully!");
@@ -58,24 +68,31 @@
                 window.speechSynthesis.speak(ut);
             };
 
-            if (view === 'login') {
+            if (view === 'login' || view === 'signup') {
                 return (
                     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-700 p-6">
                         <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center">
                             <h1 className="text-4xl font-bold text-blue-600 mb-2">AccessAble</h1>
-                            <p className="text-slate-500 mb-8 font-medium">Empowering every writer.</p>
-                            <form onSubmit={handleAuth} className="space-y-4 text-left">
+                            <p className="text-slate-500 mb-8 font-medium italic">Empowering every writer.</p>
+                            <form onSubmit={(e) => handleAuth(e, view)} className="space-y-4 text-left">
                                 <div>
                                     <label className="text-sm font-bold text-slate-700 ml-1">Username</label>
-                                    <input type="text" onChange={(e) => setUser(e.target.value)} required className="w-full mt-1 p-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none" placeholder="Enter your name" />
+                                    <input name="username" type="text" required className="w-full mt-1 p-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none" placeholder="Enter name" />
                                 </div>
                                 <div>
                                     <label className="text-sm font-bold text-slate-700 ml-1">Password</label>
                                     <input type="password" required className="w-full mt-1 p-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none" placeholder="••••••••" />
                                 </div>
-                                <button className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:bg-blue-700 transition-all active:scale-95 mt-4">Sign In</button>
+                                <button className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:bg-blue-700 transition-all active:scale-95 mt-4">
+                                    {view === 'login' ? 'Sign In' : 'Create Account'}
+                                </button>
                             </form>
-                            <p className="mt-6 text-sm text-slate-400">Don't have an account? <span className="text-blue-600 font-bold cursor-pointer">Sign up</span></p>
+                            <p className="mt-6 text-sm text-slate-400">
+                                {view === 'login' ? "Don't have an account?" : "Already have an account?"} 
+                                <span onClick={() => setView(view === 'login' ? 'signup' : 'login')} className="text-blue-600 font-bold cursor-pointer ml-1 underline">
+                                    {view === 'login' ? 'Sign up' : 'Login'}
+                                </span>
+                            </p>
                         </div>
                     </div>
                 );
@@ -83,10 +100,9 @@
 
             return (
                 <div className={`min-h-screen flex flex-col ${contrast === 'dark' ? 'bg-zinc-900 text-white' : contrast === 'high' ? 'bg-black text-yellow-400' : 'bg-slate-50 text-slate-900'}`}>
-                    {/* Top Navigation */}
-                    <nav className="h-16 border-b flex items-center justify-between px-6 bg-white shadow-sm text-slate-900">
+                    <nav className="h-16 border-b flex items-center justify-between px-6 bg-white shadow-sm text-slate-900 font-sans">
                         <div className="flex items-center gap-6">
-                            <span className="text-2xl font-black text-blue-600 tracking-tight">AccessAble</span>
+                            <span className="text-2xl font-black text-blue-600 tracking-tight cursor-default">AccessAble</span>
                             <input 
                                 className="bg-slate-100 px-3 py-1 rounded-md font-bold focus:bg-white transition outline-none border border-transparent focus:border-blue-200"
                                 value={activeNote.title}
@@ -94,13 +110,12 @@
                             />
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium text-slate-500">Welcome, {user || 'User'}</span>
-                            <button onClick={() => setView('login')} className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition">Logout</button>
+                            <span className="text-sm font-medium text-slate-500">Welcome, {user?.username}</span>
+                            <button onClick={handleLogout} className="text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition">Logout</button>
                         </div>
                     </nav>
 
                     <div className="flex flex-1 overflow-hidden">
-                        {/* Notes Sidebar */}
                         <aside className="w-72 bg-white border-r p-5 hidden lg:block overflow-y-auto text-slate-900">
                             <button onClick={() => setActiveNote({id: Date.now(), title: "New Note", content: ""})} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold mb-8 hover:bg-blue-700 shadow-md transition">+ New Document</button>
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Saved Documents</h3>
@@ -113,17 +128,15 @@
                             </div>
                         </aside>
 
-                        {/* Main App Workspace */}
                         <main className="flex-1 flex flex-col p-4 md:p-8">
-                            {/* Toolbar */}
                             <div className="mb-6 flex flex-wrap gap-2 items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-200 text-slate-900">
                                 <div className="flex bg-slate-100 rounded-lg p-1 mr-2">
-                                    <button onClick={() => setFontSize(s => s + 2)} className="px-3 py-1 hover:bg-white rounded-md transition font-bold">A+</button>
-                                    <button onClick={() => setFontSize(s => Math.max(12, s - 2))} className="px-3 py-1 hover:bg-white rounded-md transition font-bold">A-</button>
+                                    <button onClick={() => setFontSize(s => s + 2)} className="px-3 py-1 hover:bg-white rounded-md transition font-bold text-black">A+</button>
+                                    <button onClick={() => setFontSize(s => Math.max(12, s - 2))} className="px-3 py-1 hover:bg-white rounded-md transition font-bold text-black">A-</button>
                                 </div>
-                                <button onClick={() => setContrast(c => c === 'light' ? 'dark' : c === 'dark' ? 'high' : 'light')} className="px-4 py-2 hover:bg-slate-100 rounded-xl transition font-medium border">Contrast</button>
-                                <button onClick={() => setDyslexic(!dyslexic)} className={`px-4 py-2 rounded-xl transition font-medium border ${dyslexic ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100'}`}>Dyslexia Font</button>
-                                <button onClick={() => setRuler(!ruler)} className={`px-4 py-2 rounded-xl transition font-medium border ${ruler ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100'}`}>Reading Ruler</button>
+                                <button onClick={() => setContrast(c => c === 'light' ? 'dark' : c === 'dark' ? 'high' : 'light')} className="px-4 py-2 hover:bg-slate-100 rounded-xl transition font-medium border border-slate-200 text-black">Contrast</button>
+                                <button onClick={() => setDyslexic(!dyslexic)} className={`px-4 py-2 rounded-xl transition font-medium border ${dyslexic ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100 text-black border-slate-200'}`}>Dyslexia Font</button>
+                                <button onClick={() => setRuler(!ruler)} className={`px-4 py-2 rounded-xl transition font-medium border ${ruler ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-slate-100 text-black border-slate-200'}`}>Reading Ruler</button>
                                 
                                 <div className="ml-auto flex gap-2">
                                     <button onClick={speak} className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition shadow-sm">Read Aloud</button>
@@ -131,11 +144,10 @@
                                 </div>
                             </div>
 
-                            {/* Editor Area */}
                             <div className="relative flex-1 group">
                                 <textarea 
-                                    className={`w-full h-full p-10 rounded-3xl border-2 shadow-xl outline-none resize-none transition-all
-                                        ${contrast === 'dark' ? 'bg-zinc-800 border-zinc-700' : contrast === 'high' ? 'bg-black border-yellow-400' : 'bg-white border-slate-100'}
+                                    className={`w-full h-full p-10 rounded-3xl border-2 shadow-xl outline-none resize-none transition-all text-black
+                                        ${contrast === 'dark' ? 'bg-zinc-800 border-zinc-700 text-white' : contrast === 'high' ? 'bg-black border-yellow-400 text-yellow-400' : 'bg-white border-slate-100'}
                                         ${dyslexic ? 'dyslexic-mode' : ''}
                                         ${ruler ? 'reading-ruler' : ''}
                                     `}
